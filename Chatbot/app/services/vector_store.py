@@ -30,11 +30,20 @@ def hybrid_search(query: str, department="all", k: int = 4):
     
     query_embedding = embed_query(query)
 
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=k,
-        where={"department": department}
-    )["documents"][0]
+    if collection.count() == 0:
+     return []
+
+    res = collection.query(
+    query_embeddings=[query_embedding],
+    n_results=k
+    )
+
+    results = res.get("documents", [[]])[0] if res else []
+
+    results = [
+    r for r in results
+    if department == "all"
+    ]
 
     bm25_results = search_bm25(query, k)
 
