@@ -18,10 +18,14 @@ def ask_question_stream(req: QueryRequest, user=Depends(get_current_user)):
     def event_generator():
         full_response = ""
 
-        for chunk in rag_answer_stream(req.query, user_id):
-            full_response += chunk
-            yield f"data: {chunk}\n\n"
-            
+        try:
+            for chunk in rag_answer_stream(req.query, user_id):
+                full_response += chunk
+                yield f"data: {chunk.replace('\n', ' ')}\n\n"
+
+        except Exception as e:
+            yield f"data: ERROR: {str(e)}\n\n"
+
         yield "data: [DONE]\n\n"
 
         save_chat(user_id, req.query, full_response)

@@ -1,6 +1,6 @@
 from app.services.vector_store import hybrid_search
 from app.db.chat_history import get_chat_history
-
+from app.services.llm_service import stream_response
 
 def rag_answer_stream(query: str, user_id: str):
     docs = hybrid_search(query)
@@ -28,7 +28,5 @@ Rules:
 - Answer ONLY from context
 - If not found, say "I don't know"
 """
-
-    from app.services.llm_service import stream_response
 
     return stream_response(prompt)

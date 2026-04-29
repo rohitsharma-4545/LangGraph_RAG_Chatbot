@@ -1,5 +1,6 @@
 from langchain_openai import ChatOpenAI
 from app.config import settings
+from openai import RateLimitError
 
 llm = ChatOpenAI(
     base_url=settings.LLM_BASE_URL,
@@ -9,9 +10,16 @@ llm = ChatOpenAI(
 )
 
 # def stream_response(prompt: str):
-#     for chunk in llm.stream(prompt):
-#         if chunk.content:
-#             yield chunk.content
+#     try:
+#         for chunk in llm.stream(prompt):
+#             if chunk.content:
+#                 yield chunk.content
+
+#     except RateLimitError:
+#         yield "ERROR: Rate limit exceeded. Please try again later."
+
+#     except Exception as e:
+#         yield f"ERROR: {str(e)}"
 
 def stream_response(prompt: str):
     mock_answer = [

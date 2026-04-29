@@ -1,5 +1,7 @@
 # Before starting celery start redis
 
+myenv\Scripts\activate
+
 uvicorn app.main:app --reload
 
 docker run -d -p 6379:6379 redis
