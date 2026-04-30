@@ -3,6 +3,7 @@ from app.services.embedding_service import embed_texts
 from app.services.embedding_service import embed_query
 import uuid
 from app.services.bm25_service import build_bm25, search_bm25
+from app.services.llm_service import generate_response
 
 def add_documents(chunks):
     collection = get_collection()   
@@ -25,38 +26,42 @@ def add_documents(chunks):
         ids=[str(uuid.uuid4()) for _ in texts]
     )
 
-def hybrid_search(query: str, department="all", k: int = 4):
+def hybrid_search_with_scores(query: str, department="all", k: int = 4):
     collection = get_collection()
     
+    if collection.count() == 0:
+        return []
+
     query_embedding = embed_query(query)
 
-    if collection.count() == 0:
-     return []
-
     res = collection.query(
-    query_embeddings=[query_embedding],
-    n_results=k
+        query_embeddings=[query_embedding],
+        n_results=k
     )
 
-    results = res.get("documents", [[]])[0] if res else []
+    docs = res.get("documents", [[]])[0]
+    distances = res.get("distances", [[]])[0]
 
-    results = [
-    r for r in results
-    if department == "all"
+    # normalize vector scores
+    scored_docs = [
+        (doc, 1 - dist) for doc, dist in zip(docs, distances)
     ]
 
-    bm25_results = search_bm25(query, k)
+    bm25_docs = search_bm25(query, k)
+    bm25_scored = [(doc, 0.5) for doc in bm25_docs]
 
-    combined = []
+    # weighted merge
+    scores = {}
 
-    seen = set()
+    for doc, s in scored_docs:
+        scores[doc] = scores.get(doc, 0) + (0.5 * s)
 
-    for doc in results + bm25_results:
-        if doc not in seen:
-            combined.append(doc)
-            seen.add(doc)
+    for doc, s in bm25_scored:
+        scores[doc] = scores.get(doc, 0) + (0.3 * s)
 
-    return combined[:k]
+    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+    return ranked[:k]
 
 def clear_collection():
     collection = get_collection()
@@ -67,3 +72,13 @@ def clear_collection():
             collection.delete(ids=ids)
     except Exception as e:
         print("Error clearing collection:", e)
+
+def rewrite_query_llm(query: str):
+    prompt = f"""
+Rewrite the following query to improve retrieval quality.
+Keep meaning same. Be concise.
+
+Query: {query}
+Rewritten:
+"""
+    return generate_response(prompt).strip()
