@@ -6,25 +6,35 @@ from app.services.reranker import rerank
 THRESHOLD = 0.45
 MAX_ATTEMPTS = 3
 
-final_docs = []
-
 def rag_answer_stream(query: str, user_id: str):
+    final_docs = []
+
     for attempt in range(MAX_ATTEMPTS):
-        print(attempt, " rewriting")
-        if attempt > 0:
-            q = rewrite_query_llm(query)
-        else:
-            q = query
+        print(f"[RAG] Attempt {attempt}")
+
+        q = query if attempt == 0 else rewrite_query_llm(query)
 
         results = hybrid_search_with_scores(q)
 
-        docs = [doc for doc, _ in results]
+        if not results:
+            continue
 
-        reranked_docs = rerank(q, docs)
+        # filter by confidence
+        filtered = [doc for doc, score in results if score >= THRESHOLD]
+
+        # fallback if nothing passes threshold
+        if not filtered:
+            filtered = [doc for doc, _ in results]
+
+        reranked_docs = rerank(q, filtered)
 
         final_docs = reranked_docs
 
-    if len(final_docs) < 2:
+        # ✅ early exit if good enough
+        if len(final_docs) >= 2:
+            break
+
+    if not final_docs:
         return iter(["I don't know\n"])
 
     context = "\n\n".join(final_docs)
