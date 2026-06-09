@@ -4,7 +4,8 @@ myenv\Scripts\activate
 
 uvicorn app.main:app --reload
 
-docker run -d -p 6379:6379 redis
+docker run -d --name redis-server -p 6379:6379 redis
+docker start redis-server
 
 celery -A app.worker.celery_worker worker --loglevel=info --pool=solo
 

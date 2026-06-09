@@ -1,20 +1,18 @@
 import os
 from jose import jwt
 from datetime import datetime, timedelta
+from app.config import settings
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-EXP_HOURS = int(os.getenv("JWT_EXP_HOURS", 10))
 
 
 def create_token(user_id: str, role: str = "user"):
     payload = {
         "sub": user_id,
         "role": role,
-        "exp": datetime.utcnow() + timedelta(hours=EXP_HOURS)
+        "exp": datetime.utcnow() + timedelta(hours=settings.EXP_HOURS)
     }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 def verify_token(token: str):
-    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
